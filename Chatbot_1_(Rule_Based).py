@@ -4,7 +4,6 @@ import numpy as np
 import nltk
 import matplotlib.pyplot as plt
 import re
-import spacy
 # import tensorflow as tf
 # import tensorflow_datasets as tfds
 # from tensorflow.keras import layers , activations , models , preprocessing, utils
@@ -18,7 +17,7 @@ import spacy
 # tf.random.set_seed(1)
 import time
 import os
-import gdown
+
 
 # set pandas viewing options
 pd.set_option("display.max_columns", None)
