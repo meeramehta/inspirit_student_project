@@ -166,6 +166,7 @@ prompt=st.text_input("Write to the chatbot. Press ENTER to see chatbot's respons
 response_str=chatbot_3(prompt)
 st.write(f"{name}'s response: {response_str}")
 st.caption("This chatbot will also provide resources if it detects depression, stress, or abuse.")
+st.subheader("Example of Rule Based Chatbot code:")
 st.code(
 """# Rule-Based ChatBot
 def chatbot_3(input):
@@ -224,3 +225,4 @@ def chatbot_3(input):
     else:
         return last"""
 )
+st.write("Checkout ELIZA the rule-based chatbot created in the 1960's here: https://www.eclecticenergies.com/psyche/eliza")

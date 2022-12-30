@@ -50,27 +50,6 @@ st.title("Chatbot 2: NLP Chatbot (LSTM)")
 runcmd("wget -q https://storage.googleapis.com/inspirit-ai-data-bucket-1/Data/AI%20Scholars/Sessions%206%20-%2010%20(Projects)/Project%20-%20Mental%20Health%20Chatbots/chatbot_seq2seq_v3.h5")
 chat_data = pd.read_csv("https://raw.githubusercontent.com/nbertagnolli/counsel-chat/master/data/20200325_counsel_chat.csv")
 
-st.subheader("Here is a look at some of the training data we used from Counsel Chat:")
-st.write("Data source: https://github.com/nbertagnolli/counsel-chat")
-st.write(chat_data.head(20)[['questionText', 'topic', 'answerText']])
-st.write("The questionText column contains examples of patient's questions to their therapist.")
-st.write("The answerText column contains examples of therapists responses.")
-
-st.subheader("Plotting popular topics from our training data set")
-
-topics = chat_data["topic"].unique()
-lengths = chat_data["topic"].value_counts()
-fig = plt.figure(figsize = (10, 5))
-plt.bar(x = lengths.keys(), height = lengths.values)
-ax = plt.gca()
-for tick in ax.get_xticklabels():
-    tick.set_rotation(80)
-
-st.pyplot(fig)
-st.caption("""The training data contains a lot more questions about depression, anxiety and counseling fundamentals, 
-than questions about military issues and human-sexuality. We expect our model to do better on 
-the topics for which it has more data.""")
-
 # Model Code
 
 X = chat_data["questionText"]
@@ -102,39 +81,6 @@ for (question, answer) in zip(X, y):
   question_lengths.append(length_question)
   answer_lengths.append(length_answer)
 
-# Display the plot
-st.subheader("Lengths of questions (in red) and answers (in blue)")
-fig = plt.figure(figsize = (10, 5))
-plt.hist(question_lengths, color = "red", alpha = 0.5)
-plt.hist(answer_lengths, color = "blue", alpha = 0.2)
-plt.axvline(np.mean(question_lengths), color = "red")
-plt.axvline(np.mean(answer_lengths), color = "blue")
-st.pyplot(fig)
-st.caption("""The training data contains longer answer text than question text. The red line is the average length in number of 
-sentences of the question, and the blue line is the average length in number of sentences of the answers.""")
-st.subheader("LSTM Model Architecture")
-st.code(
-    """
-    enc_inputs = Input(shape=(None,))
-    enc_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(enc_inputs)
-    enc_lstm = LSTM(200, return_state=True)
-    _, state_h, state_c = enc_lstm(enc_embedding)
-    enc_states = [state_h, state_c]
-
-    dec_inputs = Input(shape=(None,))
-    dec_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(dec_inputs)
-    dec_lstm = LSTM(200, return_state=True, return_sequences=True)
-    dec_outputs, _, _ = dec_lstm(dec_embedding, initial_state=enc_states)
-
-    dec_dense = Dense(VOCAB_SIZE, activation=softmax)
-    output = dec_dense(dec_outputs)
-
-
-    model = Model([enc_inputs, dec_inputs], output)
-
-    model.compile(optimizer=RMSprop(), loss='categorical_crossentropy')
-    """
-)
 # NLP code
 question_answer_pairs = []
 
@@ -192,7 +138,7 @@ def tokenize_and_pad(sentence, max_len):
     tokenized_sentence = ["<SOS>"] + sentence_arr[0:diff] + ["<EOS>"]
 
   return tokenized_sentence
-
+tf.keras.backend.clear_session()
   # re-create questions, answers
 questions = [arr[0] for arr in question_answer_pairs]
 answers = [arr[1] for arr in question_answer_pairs]
@@ -239,8 +185,8 @@ path_to_weight = "chatbot_seq2seq_v3.h5"
 model.load_weights(path_to_weight)
 
 def make_inference_models():
-    dec_state_input_h = Input(shape=(200,))
-    dec_state_input_c = Input(shape=(200,))
+    dec_state_input_h = Input(shape=(200,), name="anotherlayer1")
+    dec_state_input_c = Input(shape=(200,), name="anotherlayer2")
     dec_states_inputs = [dec_state_input_h, dec_state_input_c]
     dec_outputs, state_h, state_c = dec_lstm(dec_embedding,
                                              initial_state=dec_states_inputs)
@@ -249,11 +195,11 @@ def make_inference_models():
     dec_model = Model(
         inputs=[dec_inputs] + dec_states_inputs,
         outputs=[dec_outputs] + dec_states)
-    print('Inference decoder:')
-    dec_model.summary()
-    print('Inference encoder:')
+    #print('Inference decoder:')
+    #dec_model.summary()
+    #print('Inference encoder:')
     enc_model = Model(inputs=enc_inputs, outputs=enc_states)
-    enc_model.summary()
+    #enc_model.summary()
     return enc_model, dec_model
 
 def str_to_tokens(sentence: str):
@@ -270,7 +216,7 @@ def str_to_tokens(sentence: str):
 
 enc_model, dec_model = make_inference_models()
 
-question = st.text_input("Write to the AI powered chatbot. Press ENTER to see chatbot's response")
+question = st.text_input("Write to the AI powered chatbot. Press ENTER to see chatbot's response. (Response will take a few seconds to load)")
 
 for _ in range(1):
     states_values = enc_model.predict(
@@ -299,4 +245,78 @@ for _ in range(1):
         empty_target_seq[0, 0] = sampled_word_index
         states_values = [h, c]
 
-st.write(decoded_translation)
+st.write("LSTM Chatbot response: ", decoded_translation)
+
+st.subheader("Here is a look at some of the training data we used from Counsel Chat:")
+st.write("Data source: https://github.com/nbertagnolli/counsel-chat")
+st.write(chat_data.head(20)[['questionText', 'topic', 'answerText']])
+st.write("The questionText column contains examples of patient's questions to their therapist.")
+st.write("The answerText column contains examples of therapists responses.")
+
+st.subheader("Plotting popular topics from our training data set")
+
+topics = chat_data["topic"].unique()
+lengths = chat_data["topic"].value_counts()
+fig = plt.figure(figsize = (10, 5))
+plt.bar(x = lengths.keys(), height = lengths.values)
+ax = plt.gca()
+for tick in ax.get_xticklabels():
+    tick.set_rotation(80)
+
+st.pyplot(fig)
+st.caption("""The training data contains a lot more questions about depression, anxiety and counseling fundamentals, 
+than questions about military issues and human-sexuality. We expect our model to do better on 
+the topics for which it has more data.""")
+# Display the plot
+st.subheader("Lengths of questions (in red) and answers (in blue)")
+fig = plt.figure(figsize = (10, 5))
+plt.hist(question_lengths, color = "red", alpha = 0.5)
+plt.hist(answer_lengths, color = "blue", alpha = 0.2)
+plt.axvline(np.mean(question_lengths), color = "red")
+plt.axvline(np.mean(answer_lengths), color = "blue")
+st.pyplot(fig)
+st.caption("""The training data contains longer answer text than question text. The red line is the average length in number of 
+sentences of the question, and the blue line is the average length in number of sentences of the answers.""")
+
+st.subheader("LSTM Model Architecture")
+st.code(
+    """enc_inputs = Input(shape=(None,))
+  enc_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(enc_inputs)
+  enc_lstm = LSTM(200, return_state=True)
+  _, state_h, state_c = enc_lstm(enc_embedding)
+  enc_states = [state_h, state_c]
+
+  dec_inputs = Input(shape=(None,))
+  dec_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(dec_inputs)
+  dec_lstm = LSTM(200, return_state=True, return_sequences=True)
+  dec_outputs, _, _ = dec_lstm(dec_embedding, initial_state=enc_states)
+
+  dec_dense = Dense(VOCAB_SIZE, activation=softmax)
+  output = dec_dense(dec_outputs)
+
+
+  model = Model([enc_inputs, dec_inputs], output)
+
+  model.compile(optimizer=RMSprop(), loss='categorical_crossentropy')
+
+  def make_inference_models():
+    dec_state_input_h = Input(shape=(200,), name="anotherlayer1")
+    dec_state_input_c = Input(shape=(200,), name="anotherlayer2")
+    dec_states_inputs = [dec_state_input_h, dec_state_input_c]
+    dec_outputs, state_h, state_c = dec_lstm(dec_embedding,
+                                            initial_state=dec_states_inputs)
+    dec_states = [state_h, state_c]
+    dec_outputs = dec_dense(dec_outputs)
+    dec_model = Model(
+      inputs=[dec_inputs] + dec_states_inputs,
+      outputs=[dec_outputs] + dec_states)
+    print('Inference decoder:')
+    dec_model.summary()
+    print('Inference encoder:')
+    enc_model = Model(inputs=enc_inputs, outputs=enc_states)
+    enc_model.summary()
+    return enc_model, dec_model
+
+  enc_model, dec_model = make_inference_models()
+  """
+)
